@@ -2,16 +2,18 @@ name: Fork-sync
 
 permissions:
   contents: write
+  actions: write   # 删除 workflow runs 需要此权限
 
 on:
   schedule:
-    - cron: "0 19 * * 0"  # 每天北京时间凌晨3点运行
+    - cron: "0 19 * * *"  # 每天 UTC 19:00 = 北京时间凌晨 3 点运行
   workflow_dispatch:
 
 jobs:
   sync_latest_from_upstream:
     name: Sync and Protect Local Configs
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: ${{ github.event.repository.fork }}
 
     steps:
@@ -32,7 +34,7 @@ jobs:
           # 添加上游
           git remote add upstream https://github.com/hafrey1/LunaTV-config.git
           git fetch upstream main
-          
+
           # 执行合并。此时 .gitattributes 里标记为 merge=ours 的文件会无视上游修改
           git merge upstream/main --no-edit || (echo "检测到非受保护文件的核心冲突，需手动处理" && exit 1)
 
@@ -41,7 +43,12 @@ jobs:
           git push origin main
 
       - name: Delete workflow runs
-        uses: Mattraks/delete-workflow-runs@main
+        uses: Mattraks/delete-workflow-runs@v2
+        timeout-minutes: 5
         with:
-          retain_days: 0
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 7
           keep_minimum_runs: 5
+          # 只清理本工作流的记录，不扫描其他工作流和无法删除的孤儿记录
+          delete_workflow_pattern: Fork-sync
