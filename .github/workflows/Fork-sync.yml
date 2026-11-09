@@ -13,7 +13,7 @@ jobs:
   sync_latest_from_upstream:
     name: Sync and Protect Local Configs
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     if: ${{ github.event.repository.fork }}
 
     steps:
@@ -44,7 +44,8 @@ jobs:
 
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@v2
-        timeout-minutes: 5
+        timeout-minutes: 20        # 首次需清理积压的几百条记录（约 1 秒/条），之后很快
+        continue-on-error: true    # 清理失败或超时不影响整体同步结果
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
